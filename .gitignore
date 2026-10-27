@@ -1,0 +1,8 @@
+node_modules
+dist
+.env
+*.dcm
+test-data/
+backups/
+infra/certs/
+.env.production

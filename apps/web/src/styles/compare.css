@@ -1,0 +1,14 @@
+/* P3: comparison & productivity (sync, reference lines, prior studies, protocols) */
+.cmp-note { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 12px; font-size: 12px; font-weight: 600; color: var(--ink-2); background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; }
+.cmp-note .warn { color: #d98a00; }
+.chip.pill.dim { opacity: 0.5; }
+.toolbar .grp .lbl { padding: 0 4px; }
+.vp.foreign::after { content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit; box-shadow: inset 0 0 0 2px var(--cyan, #22d3ee); opacity: 0.5; }
+.ser-head { margin: 12px 0 0; font-size: 11px; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.04em; }
+.cmp-input { height: 38px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); font: 500 14px var(--ui); min-width: 0; flex: 1; }
+.cmp-list { display: grid; gap: 7px; }
+.cmp-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: 8px 12px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); text-align: left; }
+button.cmp-row { cursor: pointer; transition: border-color 0.2s; }
+button.cmp-row:hover { border-color: var(--accent); }
+.cmp-row b { display: block; font-size: 13px; }
+.cmp-row small { display: block; color: var(--ink-3); font-size: 11px; }

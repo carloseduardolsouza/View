@@ -1,0 +1,21 @@
+{
+  "name": "view",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "predev": "node -e \"const f=require('fs');if(!f.existsSync('.env')){f.copyFileSync('.env.example','.env');console.log('.env criado a partir de .env.example')}\"",
+    "dev": "pnpm --parallel --filter @view/api --filter @view/web dev",
+    "dev:api": "pnpm --filter @view/api dev",
+    "dev:web": "pnpm --filter @view/web dev",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
+    "build": "pnpm -r build",
+    "e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^26.6.5",
+    "typescript": "5.9.3",
+    "vitest": "3.2.4"
+  }
+}

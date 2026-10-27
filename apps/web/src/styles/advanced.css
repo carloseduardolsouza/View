@@ -1,0 +1,12 @@
+/* Advanced objects: SR export, overlays, fusion, AI. Reuses the Lumen tokens from styles.css. */
+.adv-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.adv-row { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; }
+.adv-row input[type="range"] { width: 100%; }
+.adv-sw { width: 14px; height: 14px; border-radius: 4px; border: 1px solid var(--line); }
+.adv-note { font-size: 12px; opacity: 0.75; }
+.adv-warn { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 13px; }
+.adv-badge { font-weight: 800; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; }
+.adv-fusion { position: fixed; inset: 0; z-index: 40; background: var(--bg, #05070d); display: flex; flex-direction: column; }
+.adv-fusion-bar { display: flex; gap: 14px; align-items: center; padding: 10px 14px; flex-wrap: wrap; }
+.adv-fusion-view { flex: 1; min-height: 0; width: 100%; }
+.adv-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }

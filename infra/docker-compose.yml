@@ -1,0 +1,21 @@
+name: view
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: view
+      POSTGRES_PASSWORD: view_dev_pw
+      POSTGRES_DB: view
+    ports: ["127.0.0.1:5433:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+  orthanc:
+    image: jodogne/orthanc-plugins:1.12.4
+    command: ["/etc/orthanc/orthanc.json"]
+    volumes:
+      - ./orthanc/orthanc.json:/etc/orthanc/orthanc.json:ro
+      - orthanc-db:/var/lib/orthanc/db
+    # bound to loopback only: the browser must go through apps/api
+    ports: ["127.0.0.1:8043:8042"]
+volumes:
+  pgdata:
+  orthanc-db:

@@ -1,0 +1,22 @@
+/* Worklist filters, recents, pagination. Uses tokens from styles.css. */
+.wl .filters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; padding: 12px; }
+.wl .filters label { display: grid; gap: 4px; min-width: 0; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); }
+.wl .filters .inp { width: 100%; min-width: 0; text-transform: none; letter-spacing: 0; font-weight: 500; }
+.wl .f-actions { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; justify-content: flex-end; }
+
+.wl .recents { display: grid; gap: 6px; }
+.wl .recents h3 { font-size: 11px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; }
+.wl .r-list { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+.wl .r-item { flex: 0 0 auto; max-width: 240px; display: grid; gap: 2px; text-align: left; padding: 8px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; font: inherit; }
+.wl .r-item:hover, .wl .r-item:focus-visible { border-color: var(--accent-2); box-shadow: var(--shadow); outline: none; }
+.wl .r-item b, .wl .r-item small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wl .r-item small { color: var(--ink-3); }
+.wl .r-item .resume { color: var(--accent); font-weight: 700; }
+
+.wl .meta { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; color: var(--ink-2); font-size: 13px; }
+.wl .meta select { height: 32px; }
+.wl .more { display: grid; gap: 6px; justify-items: center; padding: 8px 0 16px; color: var(--ink-3); font-size: 13px; }
+.wl .s-row:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+@media (max-width: 1000px) { .wl .filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .wl .filters { grid-template-columns: minmax(0, 1fr); } }

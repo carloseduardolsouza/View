@@ -1,0 +1,9 @@
+{
+  "Name": "View-Orthanc",
+  "StorageDirectory": "/var/lib/orthanc/db",
+  "IndexDirectory": "/var/lib/orthanc/db",
+  "RemoteAccessAllowed": true,
+  "AuthenticationEnabled": true,
+  "RegisteredUsers": { "orthanc": "orthanc_dev_pw" },
+  "DicomWeb": { "Enable": true, "Root": "/dicom-web/", "EnableWado": true }
+}

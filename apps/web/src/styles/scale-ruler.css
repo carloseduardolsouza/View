@@ -1,0 +1,4 @@
+.scale-ruler { position: absolute; right: 74px; bottom: 16px; text-align: right; pointer-events: none; color: #fff; font: 600 11px/1.2 var(--font-sans, system-ui, sans-serif); text-shadow: 0 0 3px #000, 0 0 2px #000; }
+.scale-ruler svg { display: block; overflow: visible; }
+.scale-ruler line { stroke: #fff; stroke-width: 2; filter: drop-shadow(0 0 1.5px #000); }
+.scale-ruler .hint { opacity: .8; font-weight: 500; }

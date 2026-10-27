@@ -1,0 +1,20 @@
+{
+  "name": "@view/viewer-core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@cornerstonejs/core": "5.13.1",
+    "@cornerstonejs/dicom-image-loader": "5.13.1",
+    "@cornerstonejs/metadata": "5.13.1",
+    "@cornerstonejs/tools": "5.13.1",
+    "@cornerstonejs/utils": "5.13.1",
+    "@view/dicom-client": "workspace:*",
+    "dcmjs": "0.52.0"
+  }
+}

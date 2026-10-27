@@ -1,0 +1,79 @@
+# Production-like stack. Postgres and Orthanc are EXTERNAL by default (DATABASE_URL / ORTHANC_URL);
+# `--profile db` adds a Postgres container. Roll out / roll back: docs/operations.md.
+#   docker compose --env-file .env.production -f infra/docker-compose.prod.yml build
+#   docker compose --env-file .env.production -f infra/docker-compose.prod.yml run --rm migrate
+#   docker compose --env-file .env.production -f infra/docker-compose.prod.yml up -d
+name: view
+services:
+  proxy:
+    image: nginx:1.27-alpine
+    ports: ["${HTTP_PORT:-80}:80", "${HTTPS_PORT:-443}:443"]
+    volumes:
+      - ./nginx/proxy.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/security-headers.conf:/etc/nginx/security-headers.conf:ro
+      - ${CERT_DIR:-./certs}:/etc/nginx/certs:ro
+    depends_on: [api, web]
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/var/cache/nginx, /var/run, /tmp]
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE, CHOWN, SETUID, SETGID]
+    security_opt: ["no-new-privileges:true"]
+
+  web:
+    image: ${REGISTRY:-view}/web:${VERSION:?set VERSION, e.g. 1.0.0}
+    build: { context: .., dockerfile: infra/web.Dockerfile }
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
+  api:
+    image: ${REGISTRY:-view}/api:${VERSION:?set VERSION, e.g. 1.0.0}
+    build: { context: .., dockerfile: infra/api.Dockerfile }
+    environment: &apienv
+      DATABASE_URL: ${DATABASE_URL:?}
+      ORTHANC_URL: ${ORTHANC_URL:?}
+      ORTHANC_USER: ${ORTHANC_USER:?}
+      ORTHANC_PASSWORD: ${ORTHANC_PASSWORD:?}
+      WEB_ORIGIN: https://${PUBLIC_HOST:?}
+      TRUST_PROXY: "true"   # client IP comes from the proxy's X-Forwarded-For
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-6000}
+    # lets ORTHANC_URL/DATABASE_URL use host.docker.internal for services running on the Docker host
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/healthz"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+    stop_grace_period: 20s
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    # no published ports: only the proxy reaches the API. /metrics is scraped from inside this network.
+
+  # one-shot: forward-only SQL migrations. BACK UP FIRST (scripts/db-backup.sh).
+  migrate:
+    image: ${REGISTRY:-view}/api:${VERSION:?}
+    profiles: [tools]
+    environment: *apienv
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    working_dir: /app/apps/api
+    command: ["node_modules/.bin/tsx", "src/migrate.ts"]
+
+  postgres:
+    image: postgres:16
+    profiles: [db]
+    environment:
+      POSTGRES_USER: view
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}   # required with --profile db
+      POSTGRES_DB: view
+    volumes: [pgdata:/var/lib/postgresql/data]
+    restart: unless-stopped
+
+volumes:
+  pgdata:
