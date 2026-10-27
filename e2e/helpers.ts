@@ -77,6 +77,6 @@ export async function expectImage(page: Page, cell: Locator) {
 
 /** Layout lives in a dropdown: open it, then pick the option. */
 export async function pickLayout(page: Page, n: number) {
-  await page.getByRole("button", { name: "Mais opções: layout" }).click();
+  await page.getByRole("button", { name: "Mais opÃ§Ãµes: layout" }).click();
   await page.getByRole("menuitem", { name: new RegExp(`Layout com ${n} image`) }).click();
 }

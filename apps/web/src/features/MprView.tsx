@@ -33,6 +33,9 @@ export function MprView({ study, seriesUid, onClose }: { study: StudySummary; se
   const [thick, setThick] = useState(10);
   const [vrPreset, setVrPreset] = useState<string>(VR_PRESETS[0].id);
   const [spin, setSpin] = useState(false);
+  const [use3d, setUse3d] = useState(() => { try { return localStorage.getItem("mpr3d") !== "off"; } catch { return true; } });
+  const [vrReady, setVrReady] = useState(false);
+  const [vrError, setVrError] = useState("");
   const [views, setViews] = useState<Array<{ name: string; cam: ReturnType<MprSession["getCamera3d"]> }>>([]);
 
   useEffect(() => {
@@ -56,18 +59,35 @@ export function MprView({ study, seriesUid, onClose }: { study: StudySummary; se
     // eslint-disable-next-line react-hooks/exhaustive-deps -- refs are stable; the volume is rebuilt only for another series
   }, [study.studyUid, seriesUid]);
 
+  // the 3D viewport loads last, in the background, once the planes are on screen (and only if the user wants it)
+  useEffect(() => {
+    const m = session.current;
+    if (!info || !use3d || !m || m.vrReady) return;
+    let live = true;
+    setVrError("");
+    m.loadVr(vrPreset).then(() => live && setVrReady(true)).catch((e: unknown) => live && setVrError(e instanceof Error ? e.message : "Falha ao montar o 3D."));
+    return () => { live = false; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- vrPreset only matters for the first load
+  }, [info, use3d]);
+  function toggle3d(on: boolean) {
+    setUse3d(on);
+    try { localStorage.setItem("mpr3d", on ? "on" : "off"); } catch { /* storage blocked */ }
+    if (!on) { s?.spin(0); setSpin(false); if (layout === "vr") setLayout("quad"); }
+  }
+
   const s = session.current;
   const ready = !!info;
+  const vrOn = ready && use3d && vrReady;
   const pickSlab = (m: SlabMode) => { setSlab(m); s?.setSlab(m, thick); };
   const toggleSpin = () => { const on = !spin; setSpin(on); s?.spin(on ? 30 : 0); };
 
   return (
-    <div className="app">
+    <div className="app pacs">
       <Topbar chip={<div className="study-chip"><i /><span>{personName(study.patientName)}</span><em>MPR / 3D</em></div>}>
         <div className="seg" role="group" aria-label="Layout">
           <button className={layout === "quad" ? "on" : ""} onClick={() => setLayout("quad")} aria-pressed={layout === "quad"} title="3 planos + 3D"><Icon name="l4" size={16} /></button>
           {CELLS.map((c) => (
-            <button key={c.id} className={layout === c.id ? "on" : ""} onClick={() => setLayout(c.id)} aria-pressed={layout === c.id}>{c.label}</button>
+            <button key={c.id} className={layout === c.id ? "on" : ""} disabled={c.id === "vr" && !vrOn} onClick={() => setLayout(c.id)} aria-pressed={layout === c.id}>{c.label}</button>
           ))}
         </div>
         <button className="btn" onClick={onClose}><Icon name="out" size={16} />Fechar MPR</button>
@@ -82,6 +102,13 @@ export function MprView({ study, seriesUid, onClose }: { study: StudySummary; se
                   <div className="vp-host" ref={refs[c.id]} aria-label={c.label} />
                   <span className="vp-tag">{c.label}</span>
                   <button className="vp-max" title={layout === c.id ? "Mostrar todos" : "Maximizar"} aria-label={layout === c.id ? "Mostrar todos" : `Maximizar ${c.label}`} onClick={() => setLayout(layout === c.id ? "quad" : c.id)}><Icon name="full" size={14} /></button>
+                  {c.id === "vr" && ready && !vrOn && (
+                    <div className="vr-wait" role="status">
+                      {!use3d ? (<><span>Visualização 3D desativada</span><button className="btn" onClick={() => toggle3d(true)}>Ativar 3D</button></>)
+                        : vrError ? (<><span className="err">{vrError}</span><button className="btn" onClick={() => toggle3d(false)}>Desativar 3D</button></>)
+                        : (<><div className="spinner" /><span>Carregando 3D em segundo plano…</span></>)}
+                    </div>
+                  )}
                   {st?.orient && ready && (<>
                     <span className="ori t">{st.orient.top}</span><span className="ori b">{st.orient.bottom}</span>
                     <span className="ori l">{st.orient.left}</span><span className="ori r">{st.orient.right}</span>
@@ -133,20 +160,23 @@ export function MprView({ study, seriesUid, onClose }: { study: StudySummary; se
 
           <section className="card pane" style={{ "--i": 1 } as CSSProperties}>
             <div className="sec"><h3>Volume 3D</h3>
+              <label className="tg"><span>Carregar visualização 3D</span>
+                <input type="checkbox" checked={use3d} disabled={!vrOn} onChange={(e) => toggle3d(e.target.checked)} /><i />
+              </label>
               <div className="chips-row">
-                {VR_PRESETS.map((p) => <button key={p.id} className={`chip pill ${vrPreset === p.id ? "on" : ""}`} disabled={!ready} onClick={() => { setVrPreset(p.id); s?.setVrPreset(p.id); }}>{p.label}</button>)}
+                {VR_PRESETS.map((p) => <button key={p.id} className={`chip pill ${vrPreset === p.id ? "on" : ""}`} disabled={!vrOn} onClick={() => { setVrPreset(p.id); s?.setVrPreset(p.id); }}>{p.label}</button>)}
               </div>
             </div>
             <div className="sec"><h3>Vistas</h3>
               <div className="chips-row">
-                {CAMS.map(([id, label]) => <button key={id} className="chip pill" disabled={!ready} onClick={() => s?.setCamera3d(id)}>{label}</button>)}
+                {CAMS.map(([id, label]) => <button key={id} className="chip pill" disabled={!vrOn} onClick={() => s?.setCamera3d(id)}>{label}</button>)}
               </div>
               <div className="row">
-                <button className="btn" disabled={!ready} onClick={toggleSpin}><Icon name={spin ? "pause" : "play"} size={14} />{spin ? "Parar giro" : "Girar"}</button>
-                <button className="btn" disabled={!ready} onClick={() => { s?.resetCamera3d(); }}><Icon name="reset" size={14} />Câmera</button>
+                <button className="btn" disabled={!vrOn} onClick={toggleSpin}><Icon name={spin ? "pause" : "play"} size={14} />{spin ? "Parar giro" : "Girar"}</button>
+                <button className="btn" disabled={!vrOn} onClick={() => { s?.resetCamera3d(); }}><Icon name="reset" size={14} />Câmera</button>
               </div>
               <div className="row">
-                <button className="btn" disabled={!ready || views.length >= 4} onClick={() => s && setViews([...views, { name: `Vista ${views.length + 1}`, cam: s.getCamera3d() }])}>Salvar vista</button>
+                <button className="btn" disabled={!vrOn || views.length >= 4} onClick={() => s && setViews([...views, { name: `Vista ${views.length + 1}`, cam: s.getCamera3d() }])}>Salvar vista</button>
               </div>
               {views.length > 0 && <div className="chips-row">{views.map((v) => <button key={v.name} className="chip pill" onClick={() => s?.restoreCamera3d(v.cam)}>{v.name}</button>)}</div>}
               <p className="mpr-note">Arraste para girar; roda ou botão direito dá zoom; central move.</p>

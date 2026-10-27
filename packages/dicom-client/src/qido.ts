@@ -10,6 +10,13 @@ export interface StudySummary {
   date: string;
   description: string;
   modalities: string[];
+  /** extra QIDO fields (absent in older saved recents) */
+  time?: string;
+  birthDate?: string;
+  sex?: string;
+  referrer?: string;
+  seriesCount?: number | null;
+  instanceCount?: number | null;
 }
 
 export interface SeriesSummary {
@@ -26,6 +33,11 @@ const str = (t: Tag, tag: string): string => {
   return v == null ? "" : String(v);
 };
 
+const numOf = (t: Tag, tag: string): number | null => {
+  const v = Number(t[tag]?.Value?.[0]);
+  return t[tag]?.Value?.length && Number.isFinite(v) ? v : null;
+};
+
 export function parseStudy(t: Tag): StudySummary {
   return {
     studyUid: str(t, "0020000D"),
@@ -35,6 +47,12 @@ export function parseStudy(t: Tag): StudySummary {
     date: str(t, "00080020"),
     description: str(t, "00081030"),
     modalities: (t["00080061"]?.Value ?? []).map(String),
+    time: str(t, "00080030"),
+    birthDate: str(t, "00100030"),
+    sex: str(t, "00100040"),
+    referrer: str(t, "00080090"),
+    seriesCount: numOf(t, "00201206"),
+    instanceCount: numOf(t, "00201208"),
   };
 }
 
@@ -51,7 +69,8 @@ export function parseSeries(t: Tag): SeriesSummary {
 }
 
 export async function searchStudies(base: string, params: Record<string, string> = {}, signal?: AbortSignal) {
-  const qs = new URLSearchParams({ includefield: "00080061", limit: "500", ...params });
+  // modalities, time, birth date, sex, referring physician, number of series / instances
+  const qs = new URLSearchParams({ includefield: "00080061,00080030,00100030,00100040,00080090,00201206,00201208", limit: "500", ...params });
   return (await getJson<Tag[]>(`${base}/studies?${qs}`, { signal })).map(parseStudy);
 }
 
@@ -73,4 +92,21 @@ export async function findPriorStudies(base: string, current: StudySummary, sign
   return rows
     .filter((s) => s.studyUid !== current.studyUid && (byId ? s.patientId === current.patientId : normName(s.patientName) === name))
     .sort((a, b) => b.date.localeCompare(a.date));
+}
+
+export interface InstanceSummary { sopUid: string; number: number | null }
+
+export async function searchInstances(base: string, studyUid: string, seriesUid: string, signal?: AbortSignal): Promise<InstanceSummary[]> {
+  const rows = await getJson<Tag[]>(`${base}/studies/${encodeURIComponent(studyUid)}/series/${encodeURIComponent(seriesUid)}/instances?includefield=00200013`, { signal });
+  return rows
+    .map((t) => ({ sopUid: str(t, "00080018"), number: numOf(t, "00200013") }))
+    .filter((i) => i.sopUid)
+    .sort((a, b) => (a.number ?? 1e9) - (b.number ?? 1e9));
+}
+
+/** Full DICOM JSON of one instance (bulk data comes as BulkDataURI). */
+export async function getInstanceMetadata(base: string, studyUid: string, seriesUid: string, sopUid: string, signal?: AbortSignal): Promise<Tag> {
+  const enc = encodeURIComponent;
+  const r = await getJson<Tag[]>(`${base}/studies/${enc(studyUid)}/series/${enc(seriesUid)}/instances/${enc(sopUid)}/metadata`, { signal });
+  return r[0] ?? {};
 }

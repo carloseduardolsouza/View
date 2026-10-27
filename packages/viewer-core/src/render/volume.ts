@@ -83,6 +83,7 @@ export class MprSession {
   private cacheBefore = 0;
   private destroyed = false;
   private loaded = false;
+  private vrLoaded = false;
 
   /** `signal` guards React StrictMode's mount/unmount/mount: a stale call must not build a second engine. */
   static async create(el: MprElements, signal?: AbortSignal): Promise<MprSession> {
@@ -98,7 +99,7 @@ export class MprSession {
     this.engine = new RenderingEngine(MprSession.ENGINE);
     this.engine.setViewports([
       ...PLANES.map((p) => ({ viewportId: this.ids[p], type: Enums.ViewportType.ORTHOGRAPHIC, element: el[p], defaultOptions: { orientation: ORIENT[p], background: [0, 0, 0] as Types.Point3 } })),
-      { viewportId: this.ids.vr, type: Enums.ViewportType.VOLUME_3D, element: el.vr, defaultOptions: { background: [0.02, 0.05, 0.12] as Types.Point3 } },
+      { viewportId: this.ids.vr, type: Enums.ViewportType.VOLUME_3D, element: el.vr, defaultOptions: { background: [0, 0, 0] as Types.Point3 } },
     ]);
 
     const g = ToolGroupManager.createToolGroup(`mpr-${uid}`);
@@ -206,13 +207,27 @@ export class MprSession {
       });
     });
     if (this.destroyed) throw new Error("cancelado");
-    await setVolumesForViewports(this.engine, [{ volumeId: this.volumeId }], [this.ids.axial, this.ids.coronal, this.ids.sagittal, this.ids.vr]);
+    // the 2D planes come first; the 3D viewport is attached later by loadVr() so it never delays them
+    await setVolumesForViewports(this.engine, [{ volumeId: this.volumeId }], [this.ids.axial, this.ids.coronal, this.ids.sagittal]);
     this.loaded = true;
-    this.vp("vr").setProperties({ preset: "CT-Bones" } as never);
     this.setTool(this.tool);
     this.engine.render();
     this.emit();
     return { ...geometry, loadMs: Math.round(performance.now() - t0) };
+  }
+
+  get vrReady() { return this.vrLoaded; }
+
+  /** Attaches the volume to the 3D viewport (the costly part). Call after load(); a no-op when already done. */
+  async loadVr(preset = "CT-Bones") {
+    if (this.vrLoaded || this.destroyed || !this.loaded) return;
+    await new Promise((r) => setTimeout(r, 50)); // let the planes paint first
+    if (this.destroyed) return;
+    await setVolumesForViewports(this.engine, [{ volumeId: this.volumeId }], [this.ids.vr]);
+    if (this.destroyed) return;
+    this.vp("vr").setProperties({ preset } as never);
+    this.vrLoaded = true;
+    this.vp("vr").render();
   }
 
   private applyVoi(lower: number, upper: number, except?: PlaneId) {
@@ -269,12 +284,14 @@ export class MprSession {
   }
 
   setVrPreset(id: string) {
+    if (!this.vrLoaded) return;
     const v = this.vp("vr");
     v.setProperties({ preset: id } as never);
     v.render();
   }
 
   setCamera3d(c: Cam3d) {
+    if (!this.vrLoaded) return;
     const v = this.vp("vr");
     v.setCamera({ viewPlaneNormal: CAMS[c].n, viewUp: CAMS[c].up });
     v.resetCamera();
@@ -282,14 +299,14 @@ export class MprSession {
   }
 
   getCamera3d(): Types.ICamera { return structuredClone(this.vp("vr").getCamera()); }
-  restoreCamera3d(c: Types.ICamera) { const v = this.vp("vr"); v.setCamera(c); v.render(); }
-  resetCamera3d() { const v = this.vp("vr"); v.resetCamera(); v.render(); }
+  restoreCamera3d(c: Types.ICamera) { if (!this.vrLoaded) return; const v = this.vp("vr"); v.setCamera(c); v.render(); }
+  resetCamera3d() { if (!this.vrLoaded) return; const v = this.vp("vr"); v.resetCamera(); v.render(); }
 
   /** Turntable cine around the vertical axis, degrees per second (0 stops). */
   spin(degPerSec: number) {
     cancelAnimationFrame(this.spinning);
     this.spinning = 0;
-    if (!degPerSec) return;
+    if (!degPerSec || !this.vrLoaded) return;
     let last = performance.now();
     const tick = (now: number) => {
       if (this.destroyed) return;

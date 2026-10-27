@@ -1,7 +1,7 @@
 import type { StudySummary } from "@view/dicom-client";
 
-export interface Filters { name: string; pid: string; acc: string; desc: string; modality: string; from: string; to: string }
-export const EMPTY_FILTERS: Filters = { name: "", pid: "", acc: "", desc: "", modality: "", from: "", to: "" };
+export interface Filters { name: string; pid: string; acc: string; desc: string; modality: string; from: string; to: string; sex: string }
+export const EMPTY_FILTERS: Filters = { name: "", pid: "", acc: "", desc: "", modality: "", from: "", to: "", sex: "" };
 export const MODALITIES = ["CT", "MR", "CR", "DX", "US", "PT", "NM", "XA", "MG", "RF", "OT"];
 export const PAGE = 50;
 
@@ -17,20 +17,37 @@ export function buildQuery(f: Filters): Record<string, string> {
   set("AccessionNumber", f.acc);
   if (f.desc.trim()) q.StudyDescription = wrap(f.desc.trim());
   set("ModalitiesInStudy", f.modality);
+  set("PatientSex", f.sex);
   if (f.from || f.to) q.StudyDate = `${ymd(f.from)}-${ymd(f.to)}`;
   return q;
 }
 
 export const hasFilters = (f: Filters) => Object.values(f).some((v) => v.trim() !== "");
 
-export type SortKey = "date-desc" | "date-asc" | "name";
+export type SortCol = "name" | "date" | "pid" | "acc" | "desc" | "mod" | "birth" | "series";
+/** "<col>-asc" | "<col>-desc"; a bare column sorts ascending */
+export type SortKey = SortCol | `${SortCol}-${"asc" | "desc"}`;
+const SORT_VALUE: Record<SortCol, (s: StudySummary) => string | number> = {
+  name: (s) => s.patientName, date: (s) => `${s.date}${s.time ?? ""}`, pid: (s) => s.patientId, acc: (s) => s.accession,
+  desc: (s) => s.description, mod: (s) => s.modalities.join(","), birth: (s) => s.birthDate ?? "", series: (s) => s.instanceCount ?? -1,
+};
 export function sortStudies(rows: StudySummary[], key: SortKey): StudySummary[] {
-  const cmp: Record<SortKey, (a: StudySummary, b: StudySummary) => number> = {
-    "date-desc": (a, b) => b.date.localeCompare(a.date),
-    "date-asc": (a, b) => a.date.localeCompare(b.date),
-    name: (a, b) => a.patientName.localeCompare(b.patientName, "pt"),
-  };
-  return [...rows].sort(cmp[key]); // stable: ties keep server order
+  const [col, dir] = key.split("-") as [SortCol, string | undefined];
+  const f = SORT_VALUE[col];
+  const sign = dir === "desc" ? -1 : 1;
+  return [...rows].sort((a, b) => { // stable: ties keep server order
+    const x = f(a), y = f(b);
+    return sign * (typeof x === "number" && typeof y === "number" ? x - y : String(x).localeCompare(String(y), "pt"));
+  });
+}
+
+/** Quick date ranges for the filter chips: [from, to] as yyyy-mm-dd ("" = open). */
+export function dateRange(preset: "today" | "yesterday" | "7d" | "30d" | "1y", now = new Date()): [string, string] {
+  const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const back = (days: number) => { const d = new Date(now); d.setDate(d.getDate() - days); return iso(d); };
+  if (preset === "today") return [iso(now), iso(now)];
+  if (preset === "yesterday") return [back(1), back(1)];
+  return [back({ "7d": 6, "30d": 29, "1y": 364 }[preset]), iso(now)];
 }
 
 // --- Recent studies (per browser) ---

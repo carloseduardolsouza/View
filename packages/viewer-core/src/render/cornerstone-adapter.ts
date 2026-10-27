@@ -1,5 +1,5 @@
 // The only file (with tools.ts) that imports Cornerstone: swap the render engine here without touching the UI.
-import { cache, Enums, eventTarget, imageLoader, init as csInit, metaData, RenderingEngine, type Types } from "@cornerstonejs/core";
+import { cache, Enums, eventTarget, imageLoader, init as csInit, metaData, RenderingEngine, utilities as csUtils, type Types } from "@cornerstonejs/core";
 import dicomImageLoader from "@cornerstonejs/dicom-image-loader";
 import { init as toolsInit } from "@cornerstonejs/tools";
 import { utilities as metadataUtils } from "@cornerstonejs/metadata";
@@ -374,6 +374,24 @@ export class StackView {
     const g = row && col ? { frameOfReference: p0?.frameOfReferenceUID || null, row, col, positions: planes.map((p) => v3(p?.imagePositionPatient)) } : null;
     this.geom = { ids: this.ids, g };
     return g;
+  }
+
+  /** Pixel value under a canvas point (CSS px relative to the element): HU for CT; null outside the image. */
+  probe(x: number, y: number): { value: number; col: number; row: number; unit: string } | null {
+    const imageId = this.ids[this.idx];
+    const img = this.viewport.getImageData?.();
+    if (!imageId || !img?.imageData) return null;
+    const [i, j] = csUtils.transformWorldToIndex(img.imageData, this.viewport.canvasToWorld([x, y]));
+    const [w, h] = img.dimensions;
+    if (i == null || j == null || i < 0 || j < 0 || i >= w || j >= h) return null;
+    const raw = img.voxelManager ? (img.voxelManager.getAtIJK(i, j, 0) as unknown) : img.scalarData?.[j * w + i];
+    if (typeof raw !== "number") return null; // colour images: no single value
+    let value = raw;
+    if (!img.preScale?.scaled) {
+      const lut = metaData.get("modalityLutModule", imageId) as { rescaleSlope?: number; rescaleIntercept?: number } | undefined;
+      value = raw * (lut?.rescaleSlope ?? 1) + (lut?.rescaleIntercept ?? 0);
+    }
+    return { value, col: i, row: j, unit: img.metadata?.Modality === "CT" ? "HU" : "" };
   }
 
   /** Fit to the viewport without touching window/level. */

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { downloadBlob, exportSnapshot, type OverlayText, type StackView } from "@view/viewer-core";
+import { sfx } from "../lib/sound";
 import { Icon } from "../ui/Icon";
 
 /** Saves the active viewport as PNG (image + annotations, optionally corner text). Errors show inline, never in a dialog. */
@@ -10,8 +11,10 @@ export function SnapshotButton({ view, overlay, withOverlay = true, name = "capt
     try {
       setErr(null);
       downloadBlob(await exportSnapshot(view, { withAnnotations: true, withOverlay, overlay }), `${name}.png`);
+      sfx("shutter");
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Falha ao exportar a imagem.");
+      sfx("error");
     }
   };
   return (

@@ -17,3 +17,4 @@ export * from "./render/overlays";
 export * from "./render/fusion";
 export * from "./render/fusion-live";
 export * from "./render/ai";
+export * from "./render/dicom-tags";

@@ -1,0 +1,15 @@
+/* DICOM tags dialog */
+.tags-sheet { max-width: 1100px; height: 88vh; grid-template-rows: auto auto auto minmax(0, 1fr); }
+.tags-sheet h2 small { font-weight: 500; font-size: 13px; color: var(--ink-3); }
+.tags-bar { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; }
+.tags-bar label { display: grid; gap: 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); min-width: 160px; max-width: 320px; }
+.tags-bar label.grow { flex: 1; max-width: none; }
+.tags-bar .inp { text-transform: none; letter-spacing: 0; font-weight: 500; height: 36px; }
+.tags-wrap { overflow: auto; border: 1px solid var(--line); border-radius: 10px; min-height: 0; scrollbar-width: thin; }
+.tags { width: 100%; border-collapse: collapse; font-size: 12px; }
+.tags th { position: sticky; top: 0; background: var(--surface-2); text-align: left; padding: 7px 10px; font-size: 11px; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.06em; }
+.tags td { padding: 5px 10px; border-top: 1px solid var(--line); vertical-align: top; }
+.tags td.mono { white-space: nowrap; font-size: 11px; }
+.tags td.v { font-family: var(--mono); font-size: 11px; overflow-wrap: anywhere; color: var(--ink); }
+.tags tr:hover td { background: var(--accent-soft); }
+.tags tr.item td { color: var(--ink-3); font-style: italic; border-top-style: dashed; }

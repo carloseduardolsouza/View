@@ -2,14 +2,16 @@ import type { Preferences } from "@view/contracts";
 import { DicomHttpError, searchSeries, type SeriesSummary, type StudySummary } from "@view/dicom-client";
 import {
   allAnnotations, BUILTIN_PROTOCOLS, clearAnnotations, createAnnotationHistory, clearSeriesCache, compatibility, crossing, describeAnnotation, getAnnotationByUid, hasStats, initRender, NO_SYNC,
-  presetsFor, protocolFromLayout, removeAnnotation, resolveProtocol, restore, selectAnnotation, serialize, ToolSession, upsertProtocol, ViewSync, watchAnnotations,
+  instanceOfImageId, presetsFor, protocolFromLayout, removeAnnotation, resolveProtocol, restore, selectAnnotation, serialize, setAnnotationsVisible, ToolSession, upsertProtocol, ViewSync, watchAnnotations,
   type Compat, type Protocol, type StackView, type SyncSettings, type ToolId, type ViewState,
 } from "@view/viewer-core";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { deleteAnnotation, DICOMWEB, fetchAnnotations, fetchPreferences, putAnnotation, savePreferences } from "../api";
 import { dicomDate, initials, personName } from "../format";
 import { COMMANDS, commandForKey, defaultKeymap, effectiveKeymap, keyOf, type Keymap } from "../lib/keymap";
+import { sfx } from "../lib/sound";
 import { Icon } from "../ui/Icon";
+import { SoundButton } from "../ui/SoundButton";
 import { CompareBar, CompareNote, type CompareInfo } from "./CompareBar";
 import { getResume, rememberResume } from "../lib/worklist";
 import { AiPanel } from "./AiPanel";
@@ -20,6 +22,7 @@ import { SrExport } from "./SrExport";
 import { InlineText, PriorStudiesModal, ProtocolsModal, ShortcutsModal } from "./Modals";
 import { Toolbar } from "./Toolbar";
 import { Topbar } from "./Topbar";
+import { TagsModal, type TagsTarget } from "./TagsModal";
 import { Thumb } from "./Thumb";
 import { SERIES_MIME, ViewportCell, type CellRef } from "./ViewportCell";
 
@@ -93,6 +96,10 @@ export function Viewer({ study, onClose, onOpenMpr, onOpenFusion }: ViewerProps)
   const [sync, setSync] = useState<SyncSettings>(NO_SYNC);
   const [refLines, setRefLines] = useState(false);
   const [prefs, setPrefs] = useState<Preferences | null>(null); // null until the first fetch settles
+  const [probe, setProbe] = useState(false);
+  const [annVisible, setAnnVisible] = useState(true);
+  const [maxed, setMaxed] = useState(false); // active cell fills the grid
+  const [tagsOf, setTagsOf] = useState<TagsTarget | null>(null);
 
   const views = useRef<Record<number, StackView>>({});
   const [syncCtl] = useState(() => new ViewSync(() => views.current));
@@ -149,7 +156,7 @@ export function Viewer({ study, onClose, onOpenMpr, onOpenFusion }: ViewerProps)
         s = new ToolSession((initial) => new Promise((resolve) => setTextPrompt({ initial, ...pointer.current, resolve })));
         setSession(s);
       })
-      .catch((e) => !cancelled && setFatal(e instanceof Error ? e.message : "Falha ao iniciar o visualizador."));
+      .catch((e) => { if (!cancelled) { sfx("error"); setFatal(e instanceof Error ? e.message : "Falha ao iniciar o visualizador."); } });
     return () => { cancelled = true; s?.dispose(); setSession(null); };
   }, []);
   useEffect(() => { session?.setActive(tool); }, [session, tool]);
@@ -232,7 +239,7 @@ export function Viewer({ study, onClose, onOpenMpr, onOpenFusion }: ViewerProps)
     setSaveStatus("saving");
     return p.then(
       (v) => { pending.current--; if (!pending.current) setSaveStatus((s) => (s === "error" ? s : "idle")); return v; },
-      (e) => { pending.current--; setSaveStatus("error"); throw e; },
+      (e) => { pending.current--; setSaveStatus("error"); sfx("error"); throw e; },
     );
   }, []);
 
@@ -301,6 +308,7 @@ export function Viewer({ study, onClose, onOpenMpr, onOpenFusion }: ViewerProps)
         const uid = a.annotationUID;
         if (!uid || history.applying) return;
         history.recordCompleted(a);
+        sfx("done");
         if (hasStats(a)) return save(a);
         known.current.add(uid);
         setTimeout(() => { const live = getAnnotationByUid(uid); if (live) save(live); }, 600);
@@ -338,6 +346,11 @@ export function Viewer({ study, onClose, onOpenMpr, onOpenFusion }: ViewerProps)
     };
   }, [studyUid, refreshItems, track, loadAnnotations, history]);
 
+  useEffect(() => {
+    setAnnotationsVisible(annVisible);
+    Object.values(views.current).forEach((v) => v.render());
+  }, [annVisible, items.length]);
+
   // ---- viewports ----
   const onView = useCallback((i: number, v: StackView | null) => {
     if (v) views.current[i] = v; else { delete views.current[i]; syncCtl.forget(i); }
@@ -359,6 +372,7 @@ export function Viewer({ study, onClose, onOpenMpr, onOpenFusion }: ViewerProps)
 
   function changeLayout(n: Layout) {
     setLayout(n);
+    setMaxed(false);
     setCells((c) => fillFree(c, n, studyUid, series));
     setActive((a) => Math.min(a, n - 1));
   }
@@ -472,6 +486,7 @@ export function Viewer({ study, onClose, onOpenMpr, onOpenFusion }: ViewerProps)
   // ---- commands (toolbar buttons and keyboard share one entry point; add new ids to COMMANDS in lib/keymap.ts and a case here) ----
   const run = useCallback((id: string) => {
     const v = views.current[active];
+    if (!id.startsWith("slice.") && id !== "cine.toggle") sfx(id.startsWith("layout.") || id === "view.maximize" ? "swap" : id === "app.shortcuts" ? "open" : "tick");
     if (id.startsWith("tool.")) return setTool(id.slice(5) as ToolId);
     if (id.startsWith("layout.")) return changeLayout(Number(id.slice(7)) as Layout);
     switch (id) {
@@ -500,6 +515,17 @@ export function Viewer({ study, onClose, onOpenMpr, onOpenFusion }: ViewerProps)
         return;
       }
       case "view.scale": return setShowScale((x) => !x);
+      case "view.probe": return setProbe((x) => !x);
+      case "view.annotations": return setAnnVisible((x) => !x);
+      case "view.maximize": return setMaxed((x) => !x);
+      case "view.tags": {
+        const at = v?.imageIds[v.index];
+        const ref = at ? instanceOfImageId(at) : null;
+        const c = cellsRef.current[active];
+        if (ref) return setTagsOf({ ...ref, title: `Imagem ${v!.index + 1}` });
+        if (c) return setTagsOf({ studyUid: c.studyUid, seriesUid: c.seriesUid });
+        return;
+      }
       case "study.mpr": if (mprOk) onOpenMpr(activeSeries!.seriesUid); return;
       case "protocol.manage": return setModal("protocols");
       case "app.focus": { const open = focus; setLeftOpen(open); setRightOpen(open); return; }
@@ -509,7 +535,7 @@ export function Viewer({ study, onClose, onOpenMpr, onOpenFusion }: ViewerProps)
       case "app.back": return onClose();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active, series, onClose, focus, history]);
+  }, [active, series, onClose, focus, history, layout]);
   const runRef = useRef(run);
   runRef.current = run;
   const keymapRef = useRef(keymap);
@@ -518,7 +544,7 @@ export function Viewer({ study, onClose, onOpenMpr, onOpenFusion }: ViewerProps)
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
-      if (showKeys || modal || textPrompt || t.tagName === "INPUT" || t.tagName === "TEXTAREA") return;
+      if (showKeys || modal || textPrompt || tagsOf || t.tagName === "INPUT" || t.tagName === "TEXTAREA") return;
       const cmd = commandForKey(keymapRef.current, keyOf(e));
       if (!cmd || !COMMANDS.some((c) => c.id === cmd)) return;
       e.preventDefault();
@@ -526,7 +552,7 @@ export function Viewer({ study, onClose, onOpenMpr, onOpenFusion }: ViewerProps)
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
-  }, [showKeys, modal, textPrompt]);
+  }, [showKeys, modal, textPrompt, tagsOf]);
 
   const mprOk = !!activeSeries && /^(CT|MR)$/.test(activeSeries.modality) && (activeSeries.instanceCount ?? 3) > 2;
   const pt = series.find((s) => s.modality === "PT");
@@ -558,20 +584,28 @@ export function Viewer({ study, onClose, onOpenMpr, onOpenFusion }: ViewerProps)
   );
 
   return (
-    <div className={`app${leftOpen ? "" : " hide-left"}${rightOpen ? "" : " hide-right"}`}>
+    <div className={`app pacs${leftOpen ? "" : " hide-left"}${rightOpen ? "" : " hide-right"}`}>
       <Topbar
+        end={<SoundButton />}
         chip={<div className="study-chip"><i /><span>{patient}</span>{study.modalities[0] && <em>{study.modalities.join(" ")}</em>}</div>}
       >
       <Toolbar
-        tool={tool} onTool={setTool} keymap={keymap} layout={layout} onLayout={changeLayout} invertOn={!!activeState?.invert} onCommand={run}
+        tool={tool} onTool={(t) => run(`tool.${t}`)} keymap={keymap} layout={layout} onLayout={(n) => run(`layout.${n}`)} invertOn={!!activeState?.invert} onCommand={run}
         extra={
           <>
             <CompareBar sync={sync} refLines={refLines} info={compare} keymap={keymap} onCommand={run} />
             <div className="grp">
               <button className="tool" title="Desfazer medida (Ctrl+Z)" aria-label="Desfazer medida" disabled={!history.canUndo} onClick={() => run("edit.undo")}><Icon name="undo" /></button>
               <button className="tool" title="Refazer medida (Ctrl+Y)" aria-label="Refazer medida" disabled={!history.canRedo} onClick={() => run("edit.redo")}><Icon name="redo" /></button>
-              <SnapshotButton view={ready ? activeView() ?? null : null} overlay={overlayText} withOverlay={showOv} name={`captura-${study.accession || studyUid.slice(-6)}`} />
+            </div>
+            <div className="grp">
               <button className={`tool${showScale ? " on" : ""}`} title="Régua de escala (U)" aria-label="Régua de escala" aria-pressed={showScale} onClick={() => run("view.scale")}><Icon name="ruler" /></button>
+              <button className={`tool${probe ? " on" : ""}`} title="Sonda de valor: mostra o valor do pixel sob o cursor (8)" aria-label="Sonda de valor" aria-pressed={probe} onClick={() => run("view.probe")}><Icon name="probe" /></button>
+              <button className={`tool${annVisible ? "" : " on"}`} title={annVisible ? "Ocultar medidas (6)" : "Mostrar medidas (6)"} aria-label="Ocultar medidas" aria-pressed={!annVisible} onClick={() => run("view.annotations")}><Icon name={annVisible ? "eye" : "eyeOff"} /></button>
+            </div>
+            <div className="grp">
+              <SnapshotButton view={ready ? activeView() ?? null : null} overlay={overlayText} withOverlay={showOv} name={`captura-${study.accession || studyUid.slice(-6)}`} />
+              <button className="tool" title="Tags DICOM da imagem exibida (Ctrl+I)" aria-label="Tags DICOM" disabled={!ready} onClick={() => run("view.tags")}><Icon name="tag" /></button>
               <button className="tool" title="Exportar relatório DICOM SR" aria-label="Exportar relatório DICOM SR" onClick={() => setModal("sr")}><Icon name="report" /></button>
               <button className="tool" title={mprOk ? "Abrir MPR / 3D (3)" : "MPR / 3D: escolha uma série de CT ou RM com mais de 2 cortes"} aria-label="Abrir MPR e 3D" disabled={!mprOk} onClick={() => run("study.mpr")}><Icon name="cube" /></button>
               {pt && base && <button className="tool" title="Fusão PET/CT" aria-label="Abrir fusão PET/CT" onClick={() => onOpenFusion(base.seriesUid, pt.seriesUid)}><Icon name="fusion" /></button>}
@@ -614,7 +648,7 @@ export function Viewer({ study, onClose, onOpenMpr, onOpenFusion }: ViewerProps)
 
         <section className="center">
           <CompareNote sync={sync} refLines={refLines} info={compare} onSync={(p) => setSync((s) => ({ ...s, ...p }))} />
-          <div className="vpgrid" data-n={layout}>
+          <div className="vpgrid" data-n={layout} data-max={maxed && layout > 1 ? "" : undefined}>
             {visible.map((cell, i) => {
               const info = infoOf(cell);
               return (
@@ -630,6 +664,11 @@ export function Viewer({ study, onClose, onOpenMpr, onOpenFusion }: ViewerProps)
                   session={session}
                   showOverlay={showOv}
                   showScale={showScale}
+                  probe={probe}
+                  maxed={maxed}
+                  canMax={layout > 1}
+                  dblMax={["scroll", "windowLevel", "zoom", "pan", "magnify"].includes(tool)}
+                  onMaximize={() => { setActive(i); run("view.maximize"); }}
                   jumpTo={jump && jump.cell === i ? jump.imageId : null}
                   onActivate={() => setActive(i)}
                   onDropSeries={dropSeries}
@@ -691,6 +730,7 @@ export function Viewer({ study, onClose, onOpenMpr, onOpenFusion }: ViewerProps)
 
       {textPrompt && <InlineText initial={textPrompt.initial} x={textPrompt.x} y={textPrompt.y} onDone={(t) => { textPrompt.resolve(t); setTextPrompt(null); }} />}
       {showKeys && <ShortcutsModal keymap={keymap} onChange={changeKeymap} onReset={() => changeKeymap(defaultKeymap())} onClose={() => setShowKeys(false)} />}
+      {tagsOf && <TagsModal target={tagsOf} onClose={() => setTagsOf(null)} />}
       {modal === "sr" && <SrExport study={study} onClose={() => setModal(null)} />}
       {modal === "prior" && <PriorStudiesModal current={study} onPick={(s) => void openPrior(s)} onClose={() => setModal(null)} />}
       {modal === "protocols" && <ProtocolsModal protocols={userProtocols} onSave={saveProtocol} onDelete={(id) => updatePrefs({ protocols: userProtocols.filter((p) => p.id !== id) })} onClose={() => setModal(null)} />}

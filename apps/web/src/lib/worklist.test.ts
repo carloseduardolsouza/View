@@ -1,5 +1,5 @@
 import { beforeEach, expect, it } from "vitest";
-import { buildQuery, EMPTY_FILTERS, getRecents, getResume, rememberResume, rememberStudy, sortStudies } from "./worklist";
+import { buildQuery, dateRange, EMPTY_FILTERS, getRecents, getResume, rememberResume, rememberStudy, sortStudies } from "./worklist";
 
 const st = (uid: string, date = "20260101", name = "A") => ({ studyUid: uid, patientName: name, patientId: "", accession: "", date, description: "", modalities: [] });
 
@@ -37,4 +37,14 @@ it("recents: dedupe, cap 10, keep resume", () => {
   rememberStudy(st("x5"));
   expect(getRecents()[0]!.study.studyUid).toBe("x5");
   expect(getRecents()).toHaveLength(10);
+});
+
+it("sorts by any column and builds quick date ranges", () => {
+  const rows = [st("1", "20250101", "B"), st("2", "20260101", "A")];
+  expect(sortStudies(rows, "name-desc").map((s) => s.studyUid)).toEqual(["1", "2"]);
+  expect(sortStudies(rows, "date-asc").map((s) => s.studyUid)).toEqual(["1", "2"]);
+  const now = new Date(2026, 2, 10);
+  expect(dateRange("today", now)).toEqual(["2026-03-10", "2026-03-10"]);
+  expect(dateRange("7d", now)).toEqual(["2026-03-04", "2026-03-10"]);
+  expect(buildQuery({ ...EMPTY_FILTERS, sex: "F" })).toEqual({ PatientSex: "F" });
 });

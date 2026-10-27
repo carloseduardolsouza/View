@@ -12,6 +12,7 @@ const NAV: ToolDef[] = [
   { id: "windowLevel", icon: "wl", label: "Janela / n√≠vel" },
   { id: "zoom", icon: "zoom", label: "Zoom" },
   { id: "pan", icon: "pan", label: "Mover" },
+  { id: "magnify", icon: "magnify", label: "Lupa" },
 ];
 const MEASURE: ToolDef[] = [
   { id: "length", icon: "len", label: "Comprimento" },
@@ -34,7 +35,7 @@ function Split({ name, items }: { name: string; items: Item[] }) {
   return (
     <div className="split">
       <button className={`tool${items.some((i) => i.on) ? " on" : ""}`} title={main.tip} aria-label={main.label} aria-pressed={main.on} onClick={() => pick(main)}><Icon name={main.icon} /></button>
-      <Popover label={`Mais opÁıes: ${name}`}>
+      <Popover label={`Mais op√ß√µes: ${name}`}>
         {(close) => items.map((i) => (
           <button key={i.id} role="menuitem" className={`pop-item${i.on ? " on" : ""}`} title={i.tip} aria-label={i.label} onClick={() => { pick(i); close(); }}>
             <Icon name={i.icon} size={16} /><span>{i.label}</span>
@@ -70,12 +71,12 @@ export function Toolbar(p: ToolbarProps) {
   }));
   return (
     <div className="tbar" role="toolbar" aria-label="Ferramentas">
-      <div className="grp"><Split name="navegaÁ„o" items={NAV.map(toolItem)} /></div>
+      <div className="grp"><Split name="navega√ß√£o" items={NAV.map(toolItem)} /></div>
       <div className="grp"><Split name="medidas" items={MEASURE.map(toolItem)} /></div>
       <div className="grp">
         <Split name="girar e espelhar" items={[
-          cmdItem("view.rotateRight", "rotR", "Girar ‡ direita"),
-          cmdItem("view.rotateLeft", "rotL", "Girar ‡ esquerda"),
+          cmdItem("view.rotateRight", "rotR", "Girar √† direita"),
+          cmdItem("view.rotateLeft", "rotL", "Girar √† esquerda"),
           cmdItem("view.flipH", "flipH", "Espelhar na horizontal"),
           cmdItem("view.flipV", "flipV", "Espelhar na vertical"),
         ]} />

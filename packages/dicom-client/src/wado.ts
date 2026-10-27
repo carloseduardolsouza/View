@@ -21,10 +21,10 @@ const nums = (t: DicomJson | undefined, tag: string, n: number): number[] | null
 const seq = (t: DicomJson | undefined, tag: string): DicomJson | undefined => t?.[tag]?.Value?.[0] as DicomJson | undefined;
 
 type Vec = [number, number, number];
-interface Geo { pos: Vec; row: Vec; col: Vec }
+export interface Geo { pos: Vec; row: Vec; col: Vec }
 
 /** Per-frame geometry: PerFrameFunctionalGroups item first, then SharedFunctionalGroups, then the instance's own tags. */
-function frameGeometry(instance: DicomJson, frame: number): Geo | null {
+export function frameGeometry(instance: DicomJson, frame: number): Geo | null {
   const perFrame = instance["52009230"]?.Value?.[frame] as DicomJson | undefined;
   const shared = seq(instance, "52009229");
   const pos = nums(seq(perFrame, "00209113"), "00200032", 3) ?? nums(seq(shared, "00209113"), "00200032", 3) ?? (instance["52009230"] ? null : nums(instance, "00200032", 3));

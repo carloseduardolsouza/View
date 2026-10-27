@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
 import logo from "../assets/logo.png";
-import { ThemeButton } from "../ui/theme";
+import { SoundButton } from "../ui/SoundButton";
 
-export function Topbar({ chip, children }: { chip?: ReactNode; children?: ReactNode }) {
+/** `end` replaces the sound toggle. */
+export function Topbar({ chip, children, end = <SoundButton /> }: { chip?: ReactNode; children?: ReactNode; end?: ReactNode }) {
   return (
     <header className="topbar">
       <div className="brand">
@@ -12,7 +13,7 @@ export function Topbar({ chip, children }: { chip?: ReactNode; children?: ReactN
       {chip}
       <div className="spacer" />
       {children}
-      <ThemeButton />
+      {end}
     </header>
   );
 }

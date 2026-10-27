@@ -26,3 +26,7 @@
   .mpr-main { grid-template-columns: 1fr; grid-template-rows: 64vh auto; overflow: auto; }
   .mpr-side { overflow: visible; }
 }
+.vr-wait { position: absolute; inset: 0; z-index: 2; display: grid; place-content: center; justify-items: center; gap: 12px; color: var(--ink-3); font-weight: 600; font-size: 13px; text-align: center; padding: 16px; }
+.vr-wait .spinner { width: 36px; height: 36px; }
+.vr-wait .spinner::before { inset: 5px; }
+.vr-wait .spinner::after { inset: 13px; }

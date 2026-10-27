@@ -93,7 +93,7 @@ export function ShortcutsModal({ keymap, onChange, onReset, onClose }: { keymap:
   );
 }
 
-function useEscape(onClose: () => void) {
+export function useEscape(onClose: () => void) {
   useEffect(() => {
     const h = (e: KeyboardEvent) => { if (e.key === "Escape") { e.stopPropagation(); onClose(); } };
     window.addEventListener("keydown", h, true);

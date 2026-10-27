@@ -1,7 +1,7 @@
 // Cornerstone tool wiring. Mouse map (RadiAnt-like): left = active tool, wheel = scroll, middle = pan, right = zoom.
 import {
   AngleTool, annotation, addTool, ArrowAnnotateTool, CobbAngleTool, Enums as ToolEnums, EllipticalROITool, LabelTool,
-  LengthTool, PanTool, PlanarFreehandROITool, RectangleROITool, StackScrollTool, ToolGroupManager,
+  LengthTool, MagnifyTool, PanTool, PlanarFreehandROITool, RectangleROITool, StackScrollTool, ToolGroupManager,
   ReferenceLinesTool, WindowLevelTool, ZoomTool,
 } from "@cornerstonejs/tools";
 import type { StackView } from "./cornerstone-adapter";
@@ -19,11 +19,12 @@ export const TOOLS = {
   freehand: PlanarFreehandROITool.toolName,
   arrow: ArrowAnnotateTool.toolName,
   label: LabelTool.toolName,
+  magnify: MagnifyTool.toolName,
 } as const;
 export type ToolId = keyof typeof TOOLS;
 
 const ANNOTATION_TOOLS: ToolId[] = ["length", "angle", "cobb", "rect", "ellipse", "freehand", "arrow", "label"];
-const CLASSES = [WindowLevelTool, ZoomTool, PanTool, StackScrollTool, LengthTool, AngleTool, CobbAngleTool, RectangleROITool, EllipticalROITool, PlanarFreehandROITool, ArrowAnnotateTool, LabelTool];
+const CLASSES = [WindowLevelTool, ZoomTool, PanTool, StackScrollTool, LengthTool, AngleTool, CobbAngleTool, RectangleROITool, EllipticalROITool, PlanarFreehandROITool, ArrowAnnotateTool, LabelTool, MagnifyTool];
 
 let registered = false;
 function registerTools() {
@@ -92,7 +93,7 @@ export class ToolSession {
     const prev = TOOLS[this.active];
     if (this.active !== id) {
       if (ANNOTATION_TOOLS.includes(this.active)) this.group.setToolPassive(prev);
-      else if (this.active === "windowLevel") this.group.setToolDisabled(prev);
+      else if (this.active === "windowLevel" || this.active === "magnify") this.group.setToolDisabled(prev);
       else if (this.active === "zoom" || this.active === "pan") this.group.setToolActive(prev, { bindings: [{ mouseButton: this.active === "pan" ? ToolEnums.MouseBindings.Auxiliary : ToolEnums.MouseBindings.Secondary }] });
     }
     if (id === "scroll") {

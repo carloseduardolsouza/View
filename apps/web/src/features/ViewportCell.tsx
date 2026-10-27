@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } fr
 import { DICOMWEB } from "../api";
 import { dicomDate, modalityColor } from "../format";
 import { reportDecodeError, reportTiming } from "../telemetry";
+import { Icon } from "../ui/Icon";
 import { ScaleRuler } from "./ScaleRuler";
 
 export const SERIES_MIME = "application/x-view-series";
@@ -23,6 +24,14 @@ export interface CellProps {
   session: ToolSession | null;
   showOverlay: boolean;
   showScale: boolean;
+  /** show the pixel value under the cursor */
+  probe: boolean;
+  /** the grid shows only the active cell */
+  maxed: boolean;
+  canMax: boolean;
+  /** double click maximizes (off while drawing: annotation tools use double click to edit text) */
+  dblMax: boolean;
+  onMaximize: () => void;
   /** imageId to scroll to once the series is loaded (from the measurement list) */
   jumpTo: string | null;
   onActivate: () => void;
@@ -50,6 +59,7 @@ export function ViewportCell(p: CellProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [over, setOver] = useState(false);
+  const [readout, setReadout] = useState<{ x: number; y: number; text: string } | null>(null);
   // callbacks change identity every render; effects must not re-run because of that
   const cb = useRef(p);
   cb.current = p;
@@ -111,6 +121,15 @@ export function ViewportCell(p: CellProps) {
     view.goTo(((e.clientY - r.top) / r.height) * (s.count - 1));
   }
 
+  function onProbe(e: PointerEvent<HTMLDivElement>) {
+    if (!p.probe || !view || !host.current) return;
+    const r = host.current.getBoundingClientRect();
+    const x = e.clientX - r.left, y = e.clientY - r.top;
+    const v = view.probe(x, y);
+    setReadout(v ? { x, y, text: `${Number.isInteger(v.value) ? v.value : v.value.toFixed(1)}${v.unit ? ` ${v.unit}` : ""} · (${v.col}, ${v.row})` } : null);
+  }
+  useEffect(() => { if (!p.probe) setReadout(null); }, [p.probe]);
+
   const ready = !!s && s.count > 0 && !loading;
   const frac = s && s.count > 1 ? s.index / (s.count - 1) : 0;
   const o = s?.orient;
@@ -120,6 +139,9 @@ export function ViewportCell(p: CellProps) {
     <div
       className={`vp${p.active ? " active" : ""}${over ? " drop" : ""}${p.foreign ? " foreign" : ""}`}
       onPointerDownCapture={p.onActivate}
+      onPointerMove={onProbe}
+      onPointerLeave={() => setReadout(null)}
+      onDoubleClick={(e) => { if (p.canMax && p.dblMax && (e.target as HTMLElement).tagName === "CANVAS" && !e.defaultPrevented) p.onMaximize(); }}
       tabIndex={0}
       aria-label={`Viewport ${p.index + 1}`}
       onDragOver={(e) => { if (e.dataTransfer.types.includes(SERIES_MIME)) { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; setOver(true); } }}
@@ -131,7 +153,7 @@ export function ViewportCell(p: CellProps) {
         if (ref) { e.preventDefault(); p.onDropSeries(p.index, ref); }
       }}
     >
-      <div className="vp-host" ref={host} onContextMenu={(e) => e.preventDefault()} />
+      <div className={`vp-host${ready ? " in" : ""}${p.probe ? " probing" : ""}`} ref={host} onContextMenu={(e) => e.preventDefault()} />
       {p.series && (
         <div className="vp-chip" style={{ "--c": modalityColor(mod ?? "") } as CSSProperties}>
           <i /><span>{mod} · {serName(p.series)}{p.foreign && ` · ${dicomDate(p.study.date)}`}</span>
@@ -156,6 +178,12 @@ export function ViewportCell(p: CellProps) {
         </>
       )}
       {ready && p.showScale && <ScaleRuler state={s} />}
+      {ready && readout && <div className="probe-tip" style={{ left: readout.x, top: readout.y }}>{readout.text}</div>}
+      {p.canMax && p.cell && (
+        <button className="vp-max" title={p.maxed ? "Restaurar layout (5)" : "Maximizar esta imagem (5 ou duplo clique)"} aria-label={p.maxed ? "Restaurar layout" : "Maximizar imagem"} onClick={p.onMaximize}>
+          <Icon name={p.maxed ? "mini" : "maxi"} size={14} />
+        </button>
+      )}
       {ready && s.count > 1 && (
         <div className="rail" style={{ "--p": frac } as CSSProperties} onPointerDown={onRail} onPointerMove={onRail} role="slider" aria-label="Imagem" aria-valuemin={1} aria-valuemax={s.count} aria-valuenow={s.index + 1}>
           <i /><b />

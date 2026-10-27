@@ -12,3 +12,15 @@ export const modalityColor = (m: string) => COLORS[m] ?? "#7686a5";
 
 export const initials = (name: string) =>
   name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join("") || "?";
+
+/** Age in whole years at `at` (both DA "yyyymmdd"); null when either is missing. */
+export function ageAt(birth: string | undefined, at: string): number | null {
+  if (!birth || !/^\d{8}$/.test(birth) || !/^\d{8}$/.test(at)) return null;
+  const y = +at.slice(0, 4) - +birth.slice(0, 4);
+  return at.slice(4) < birth.slice(4) ? y - 1 : y;
+}
+
+/** TM "143015.123" -> "14:30" */
+export const dicomTime = (tm: string | undefined) => (tm && /^\d{4}/.test(tm) ? `${tm.slice(0, 2)}:${tm.slice(2, 4)}` : "");
+
+export const SEX: Record<string, string> = { F: "Feminino", M: "Masculino", O: "Outro" };

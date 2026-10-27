@@ -1,4 +1,5 @@
 // Pure geometry checks, kept free of Cornerstone imports so they run under node (vitest). A refusal message is shown to the user as is.
+import { frameGeometry } from "@view/dicom-client";
 type Tag = { Value?: unknown[] } | undefined;
 export interface VolumeFrame { instance: Record<string, Tag> }
 
@@ -41,8 +42,10 @@ export function validateVolumeSeries(frames: VolumeFrame[], limits: Partial<Volu
   const iop: number[][] = [];
   const ipp: number[][] = [];
   for (const [i, f] of frames.entries()) {
-    const o = nums(f.instance["00200037"], 6);
-    const p = nums(f.instance["00200032"], 3);
+    // instance tags, or the functional groups of an enhanced (CT/MR) object that holds a single frame
+    const g = frameGeometry(f.instance as never, 0);
+    const o = g ? [...g.row, ...g.col] : nums(f.instance["00200037"], 6);
+    const p = g ? g.pos : nums(f.instance["00200032"], 3);
     if (!o) return refuse(`A imagem ${i + 1} não informa a orientação (ImageOrientationPatient); sem ela não há como posicionar os cortes no espaço.`);
     if (!p) return refuse(`A imagem ${i + 1} não informa a posição (ImagePositionPatient); sem ela não há como posicionar os cortes no espaço.`);
     iop.push(o);

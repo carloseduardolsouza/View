@@ -45,6 +45,11 @@ export function clearAnnotations() {
   annotation.state.removeAllAnnotations();
 }
 
+/** Hides/shows every annotation without deleting it (new ones drawn while hidden still show). */
+export function setAnnotationsVisible(on: boolean) {
+  for (const a of allAnnotations()) if (a.annotationUID) annotation.visibility.setAnnotationVisibility(a.annotationUID, on);
+}
+
 export function selectAnnotation(uid: string) {
   annotation.selection.setAnnotationSelected(uid, true);
 }

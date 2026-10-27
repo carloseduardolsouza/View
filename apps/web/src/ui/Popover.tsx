@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { sfx } from "../lib/sound";
 import { Icon } from "./Icon";
 
 /** Button with a caret that opens a floating panel; `children` gets a `close` callback. Closes on outside click / Escape. */
@@ -15,7 +16,7 @@ export function Popover({ label, button, className = "", children }: { label: st
   }, [open]);
   return (
     <div className={`pop ${className}`} ref={root}>
-      <button className={`pop-btn${button ? " txt" : ""}`} title={label} aria-label={label} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+      <button className={`pop-btn${button ? " txt" : ""}`} title={label} aria-label={label} aria-haspopup="menu" aria-expanded={open} onClick={() => { if (!open) sfx("open"); setOpen(!open); }}>
         {button}<Icon name="down" size={12} />
       </button>
       {open && <div className="pop-panel" role="menu">{children(() => setOpen(false))}</div>}
