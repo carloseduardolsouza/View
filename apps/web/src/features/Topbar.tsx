@@ -6,8 +6,8 @@ export function Topbar({ chip, children }: { chip?: ReactNode; children?: ReactN
   return (
     <header className="topbar">
       <div className="brand">
-        <div className="logo"><Icon name="logo" size={22} /></div>
-        <b>Lumen <span>DICOM</span></b>
+        <div className="logo"><Icon name="logo" size={16} /></div>
+        <b>Genus <span>View</span></b>
       </div>
       {chip}
       <div className="spacer" />
