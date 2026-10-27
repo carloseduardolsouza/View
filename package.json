@@ -3,7 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "predev": "node -e \"const f=require('fs');if(!f.existsSync('.env')){f.copyFileSync('.env.example','.env');console.log('.env criado a partir de .env.example')}\"",
+    "bootstrap": "pnpm --filter @view/api bootstrap",
+    "setup": "pnpm install && playwright install chromium",
+    "predev":"node -e \"const f=require('fs');if(!f.existsSync('.env')){f.copyFileSync('.env.example','.env');console.log('.env criado a partir de .env.example')}\"",
     "dev": "pnpm --parallel --filter @view/api --filter @view/web dev",
     "dev:api": "pnpm --filter @view/api dev",
     "dev:web": "pnpm --filter @view/web dev",

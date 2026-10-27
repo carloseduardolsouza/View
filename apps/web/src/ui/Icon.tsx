@@ -2,6 +2,7 @@
 const PATHS = {
   logo: <><ellipse cx="12" cy="12" rx="7.5" ry="9.5" /><path d="M4.5 12h15M12 2.5v19" opacity=".5" /></>,
   full: <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />,
+  down: <path d="M6 9l6 6 6-6" />,
   play: <path d="M7 4l13 8-13 8z" fill="currentColor" />,
   pause: <path d="M7 4h4v16H7zM13 4h4v16h-4z" fill="currentColor" />,
   first: <><path d="M6 4v16" /><path d="M20 4L9 12l11 8z" fill="currentColor" /></>,

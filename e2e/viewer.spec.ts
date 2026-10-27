@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { annotations, cleanupAnnotations, ctStudy, expectImage, forbidDialogs, listStudies, openStudy, type Study } from "./helpers";
+import { annotations, cleanupAnnotations, ctStudy, expectImage, forbidDialogs, listStudies, openStudy, pickLayout, type Study } from "./helpers";
 
 let ct: Study;
 let before: Set<string>;
@@ -76,7 +76,7 @@ test("text tool opens the inline editor and saves the typed text", async ({ page
 for (const n of [1, 2, 4]) {
   test(`layout ${n} renders an image in every cell`, async ({ page }) => {
     await openCt(page);
-    await page.getByRole("button", { name: new RegExp(`Layout com ${n} image`) }).click();
+    await pickLayout(page, n);
     await expect(cells(page)).toHaveCount(n);
     // cells beyond the first are filled with the next series by the viewer
     for (let i = 0; i < n; i++) await expectImage(page, cells(page).nth(i));

@@ -50,7 +50,7 @@ export async function openStudy(page: Page, study: Study, modality?: string, nav
   await row.click();
   await expect(page.locator(".vpgrid")).toBeVisible();
   // the viewer opens in a multi-cell layout; start every test from one cell
-  await page.getByRole("button", { name: /Layout com 1 image/ }).click();
+  await pickLayout(page, 1);
   await expect(page.locator(".vp")).toHaveCount(1);
 }
 
@@ -73,4 +73,10 @@ export async function pixels(page: Page, el: Locator) {
 /** The cell shows an image when a decent share of its pixels is not black (overlay text alone is ~1%). */
 export async function expectImage(page: Page, cell: Locator) {
   await expect.poll(async () => (await pixels(page, cell.locator(".vp-host"))).litFraction, { timeout: 30_000 }).toBeGreaterThan(0.03);
+}
+
+/** Layout lives in a dropdown: open it, then pick the option. */
+export async function pickLayout(page: Page, n: number) {
+  await page.getByRole("button", { name: "Mais opções: layout" }).click();
+  await page.getByRole("menuitem", { name: new RegExp(`Layout com ${n} image`) }).click();
 }

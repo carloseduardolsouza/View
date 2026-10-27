@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch --include ../../.env --env-file=../../.env src/server.ts",
+    "bootstrap": "tsx --env-file=../../.env src/bootstrap.ts",
     "migrate": "tsx --env-file=../../.env src/migrate.ts",
     "test": "vitest run",
     "test:int": "vitest run --config vitest.int.config.ts",

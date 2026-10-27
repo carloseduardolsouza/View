@@ -562,6 +562,23 @@ export function Viewer({ study, onClose, onOpenMpr, onOpenFusion }: ViewerProps)
       <Topbar
         chip={<div className="study-chip"><i /><span>{patient}</span>{study.modalities[0] && <em>{study.modalities.join(" ")}</em>}</div>}
       >
+      <Toolbar
+        tool={tool} onTool={setTool} keymap={keymap} layout={layout} onLayout={changeLayout} invertOn={!!activeState?.invert} onCommand={run}
+        extra={
+          <>
+            <CompareBar sync={sync} refLines={refLines} info={compare} keymap={keymap} onCommand={run} />
+            <div className="grp">
+              <button className="tool" title="Desfazer medida (Ctrl+Z)" aria-label="Desfazer medida" disabled={!history.canUndo} onClick={() => run("edit.undo")}><Icon name="undo" /></button>
+              <button className="tool" title="Refazer medida (Ctrl+Y)" aria-label="Refazer medida" disabled={!history.canRedo} onClick={() => run("edit.redo")}><Icon name="redo" /></button>
+              <SnapshotButton view={ready ? activeView() ?? null : null} overlay={overlayText} withOverlay={showOv} name={`captura-${study.accession || studyUid.slice(-6)}`} />
+              <button className={`tool${showScale ? " on" : ""}`} title="Régua de escala (U)" aria-label="Régua de escala" aria-pressed={showScale} onClick={() => run("view.scale")}><Icon name="ruler" /></button>
+              <button className="tool" title="Exportar relatório DICOM SR" aria-label="Exportar relatório DICOM SR" onClick={() => setModal("sr")}><Icon name="report" /></button>
+              <button className="tool" title={mprOk ? "Abrir MPR / 3D (3)" : "MPR / 3D: escolha uma série de CT ou RM com mais de 2 cortes"} aria-label="Abrir MPR e 3D" disabled={!mprOk} onClick={() => run("study.mpr")}><Icon name="cube" /></button>
+              {pt && base && <button className="tool" title="Fusão PET/CT" aria-label="Abrir fusão PET/CT" onClick={() => onOpenFusion(base.seriesUid, pt.seriesUid)}><Icon name="fusion" /></button>}
+            </div>
+          </>
+        }
+      />
         <button className="btn" onClick={onClose}><Icon name="prev" />Estudos</button>
         <button className="btn sq" onClick={() => run("app.toggleLeft")} title="Painel esquerdo (estudo e séries)" aria-label="Alternar painel esquerdo" aria-pressed={leftOpen}><Icon name="panelL" /></button>
         <button className="btn sq" onClick={() => run("app.toggleRight")} title="Painel direito (ajustes e medidas)" aria-label="Alternar painel direito" aria-pressed={rightOpen}><Icon name="panelR" /></button>
@@ -596,23 +613,6 @@ export function Viewer({ study, onClose, onOpenMpr, onOpenFusion }: ViewerProps)
         </aside>
 
         <section className="center">
-          <Toolbar
-            tool={tool} onTool={setTool} keymap={keymap} layout={layout} onLayout={changeLayout} invertOn={!!activeState?.invert} onCommand={run}
-            extra={
-              <>
-                <CompareBar sync={sync} refLines={refLines} info={compare} keymap={keymap} onCommand={run} />
-                <div className="grp">
-                  <button className="tool" title="Desfazer medida (Ctrl+Z)" aria-label="Desfazer medida" disabled={!history.canUndo} onClick={() => run("edit.undo")}><Icon name="undo" /></button>
-                  <button className="tool" title="Refazer medida (Ctrl+Y)" aria-label="Refazer medida" disabled={!history.canRedo} onClick={() => run("edit.redo")}><Icon name="redo" /></button>
-                  <SnapshotButton view={ready ? activeView() ?? null : null} overlay={overlayText} withOverlay={showOv} name={`captura-${study.accession || studyUid.slice(-6)}`} />
-                  <button className={`tool${showScale ? " on" : ""}`} title="Régua de escala (U)" aria-label="Régua de escala" aria-pressed={showScale} onClick={() => run("view.scale")}><Icon name="ruler" /></button>
-                  <button className="tool" title="Exportar relatório DICOM SR" aria-label="Exportar relatório DICOM SR" onClick={() => setModal("sr")}><Icon name="report" /></button>
-                  <button className="tool" title={mprOk ? "Abrir MPR / 3D (3)" : "MPR / 3D: escolha uma série de CT ou RM com mais de 2 cortes"} aria-label="Abrir MPR e 3D" disabled={!mprOk} onClick={() => run("study.mpr")}><Icon name="cube" /></button>
-                  {pt && base && <button className="tool" title="Fusão PET/CT" aria-label="Abrir fusão PET/CT" onClick={() => onOpenFusion(base.seriesUid, pt.seriesUid)}><Icon name="fusion" /></button>}
-                </div>
-              </>
-            }
-          />
           <CompareNote sync={sync} refLines={refLines} info={compare} onSync={(p) => setSync((s) => ({ ...s, ...p }))} />
           <div className="vpgrid" data-n={layout}>
             {visible.map((cell, i) => {
@@ -644,7 +644,7 @@ export function Viewer({ study, onClose, onOpenMpr, onOpenFusion }: ViewerProps)
             {fatal && <div role="alert" className="vp-msg error fatal">{fatal}</div>}
           </div>
 
-          <div className="card dock" style={{ "--i": 3 } as CSSProperties}>
+          <div className="card dock">
             <button className="tool" title="Primeira imagem" aria-label="Primeira imagem" disabled={!ready} onClick={() => run("slice.first")}><Icon name="first" /></button>
             <button className="tool" title="Imagem anterior" aria-label="Imagem anterior" disabled={!ready} onClick={() => run("slice.prev")}><Icon name="prev" /></button>
             <button className={`tool${playing ? " on" : ""}`} title="Reproduzir cine" aria-label={playing ? "Pausar cine" : "Reproduzir cine"} aria-pressed={playing} disabled={!ready || (activeState?.count ?? 0) < 2} onClick={() => setPlaying((v) => !v)}>

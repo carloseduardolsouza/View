@@ -57,6 +57,7 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
   width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; color: #fff;
   background: linear-gradient(135deg, var(--navy), var(--accent)); box-shadow: 0 3px 10px var(--glow);
 }
+.logo img { width: 16px; height: 16px; object-fit: contain; }
 .brand b { font-size: 15px; font-weight: 800; letter-spacing: -0.02em; }
 .brand b span { font-weight: 400; color: var(--ink-3); }
 .study-chip {
@@ -167,21 +168,33 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 .ser b { font-size: 13px; line-height: 1.2; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ser span.m { font: 500 11px var(--mono); color: var(--ink-3); }
 
-.center { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 10px; min-height: 0; min-width: 0; }
+.center { display: flex; flex-direction: column; gap: 10px; min-height: 0; min-width: 0; }
 .ser[data-active="true"] { box-shadow: 0 0 0 3px var(--glow); }
 
-/* toolbar */
-.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 7px; }
+/* toolbar (lives in the topbar) */
+.tbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px; margin-inline: auto; }
+.topbar .spacer { display: none; }
 .grp { display: flex; align-items: center; gap: 3px; padding-right: 8px; margin-right: 2px; border-right: 1px solid var(--line); flex: none; }
 .grp:last-child { border: 0; margin: 0; padding: 0; }
-.toolbar .tool { width: 38px; height: 38px; }
-.toolbar .tool.on { animation: none; box-shadow: 0 6px 16px var(--glow); }
+.tbar .tool { width: 32px; height: 32px; }
+.tbar .tool.on { animation: none; box-shadow: 0 4px 12px var(--glow); }
+.split { display: flex; align-items: center; }
+.split .tool { border-top-right-radius: 4px; border-bottom-right-radius: 4px; }
+.pop { position: relative; }
+.pop-btn { height: 32px; display: flex; align-items: center; gap: 4px; padding: 0 4px; border-radius: 4px 11px 11px 4px; color: var(--ink-3); transition: background 0.2s, color 0.2s; }
+.pop-btn.txt { padding: 0 8px; border-radius: 11px; }
+.pop-btn:hover, .pop-btn[aria-expanded="true"] { background: var(--accent-soft); color: var(--accent); }
+.pop-panel { position: absolute; top: calc(100% + 6px); left: 0; z-index: 60; min-width: 190px; display: grid; gap: 2px; padding: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); }
+.cmp-pop .pop-panel { display: flex; flex-wrap: wrap; gap: 6px; width: 260px; }
+.pop-item { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 8px; color: var(--ink-2); font: 600 13px var(--ui); text-align: left; }
+.pop-item:hover { background: var(--accent-soft); color: var(--accent); }
+.pop-item.on { background: var(--accent); color: #fff; }
 .seg { display: flex; background: var(--surface-2); border-radius: 11px; padding: 3px; gap: 2px; }
 .seg button { height: 30px; padding: 0 11px; border-radius: 8px; color: var(--ink-2); display: flex; align-items: center; transition: all 0.2s; }
 .seg button.on { background: var(--surface); color: var(--accent); box-shadow: 0 1px 4px rgba(10, 31, 71, 0.15); }
 
 /* viewport grid */
-.vpgrid { display: grid; gap: 8px; min-height: 0; min-width: 0; position: relative; }
+.vpgrid { flex: 1; display: grid; gap: 8px; min-height: 0; min-width: 0; position: relative; }
 .vpgrid[data-n="1"] { grid-template-columns: 1fr; grid-template-rows: 1fr; }
 .vpgrid[data-n="2"] { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr; }
 .vpgrid[data-n="4"] { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
@@ -276,7 +289,9 @@ kbd { font: 600 11px var(--mono); background: var(--surface-2); border: 1px soli
 .rail b { position: absolute; left: 1px; width: 12px; height: 12px; border-radius: 50%; background: #fff; top: calc(var(--p, 0) * (100% - 12px)); box-shadow: 0 0 0 3px var(--glow), 0 0 12px var(--accent-2); transition: transform 0.15s; }
 .rail:hover b { transform: scale(1.25); }
 
-.dock { display: flex; align-items: center; gap: 12px; padding: 8px 12px; flex-wrap: wrap; }
+.dock { display: flex; align-items: center; gap: 8px; padding: 2px 10px; flex-wrap: wrap; border-radius: 12px; }
+.dock .tool { width: 26px; height: 26px; border-radius: 8px; }
+.dock .tool .ic { width: 15px; height: 15px; }
 .tool { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; color: var(--ink-2); transition: background 0.2s, color 0.2s, transform 0.15s, box-shadow 0.25s; }
 .tool:hover { background: var(--accent-soft); color: var(--accent); }
 .tool:active { transform: scale(0.92); }

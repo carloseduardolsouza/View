@@ -1,6 +1,7 @@
 import type { Compat, SyncSettings } from "@view/viewer-core";
 import { keyLabel, type Keymap } from "../lib/keymap";
 import type { ReactNode } from "react";
+import { Popover } from "../ui/Popover";
 import "../styles/compare.css";
 
 export interface CompareInfo {
@@ -12,7 +13,7 @@ export interface CompareInfo {
 
 interface Props { sync: SyncSettings; refLines: boolean; info: CompareInfo; keymap: Keymap; onCommand: (id: string) => void }
 
-/** Toolbar group; goes in Toolbar's `extra` slot. */
+/** Topbar group (dropdown); goes in Toolbar's `extra` slot. */
 export function CompareBar({ sync, refLines, info, keymap, onCommand }: Props) {
   const btn = (cmd: string, text: string, label: string, on: boolean, dim = false, why = "") => (
     <button key={cmd} className={`chip pill${on ? " on" : ""}${dim ? " dim" : ""}`} aria-pressed={on} aria-disabled={dim || undefined}
@@ -20,7 +21,7 @@ export function CompareBar({ sync, refLines, info, keymap, onCommand }: Props) {
   );
   return (
     <div className="grp" role="group" aria-label="Comparação">
-      <span className="lbl">Sincronizar</span>
+      <Popover label="Comparação e sincronização" button={<span className="lbl">Comparar</span>} className="cmp-pop">{() => (<>
       {btn("sync.scroll", "Rolagem", "Sincronizar rolagem", sync.scroll)}
       {btn("sync.zoomPan", "Zoom", "Sincronizar zoom e posição", sync.zoomPan)}
       {btn("sync.wl", "J/N", "Sincronizar janela e nível", sync.wl)}
@@ -28,6 +29,7 @@ export function CompareBar({ sync, refLines, info, keymap, onCommand }: Props) {
       {btn("view.refLines", "Linhas", "Linhas de referência", refLines && info.refs.ok, !info.refs.ok, info.refs.ok ? "" : info.refs.reason)}
       <button className="chip pill" title={`Abrir exame anterior (${keyLabel(keymap["study.prior"] ?? "")})`} onClick={() => onCommand("study.prior")}>Anterior</button>
       <button className="chip pill" title={`Protocolos de exibição (${keyLabel(keymap["protocol.manage"] ?? "")})`} onClick={() => onCommand("protocol.manage")}>Protocolos</button>
+      </>)}</Popover>
     </div>
   );
 }
