@@ -15,6 +15,17 @@ export interface VolumeLimits {
 
 export const DEFAULT_LIMITS: VolumeLimits = { minSlices: 3, maxBytes: 1.2 * 1024 ** 3, maxSpacingMm: 10, gapTolerance: 0.1 };
 
+/** Relaxation steps tried in order when only the slice spacing is refused: full quality first, then a little less until it opens. */
+const SPACING_LADDER: Pick<VolumeLimits, "gapTolerance" | "maxSpacingMm">[] = [
+  { gapTolerance: 0.1, maxSpacingMm: 10 },
+  { gapTolerance: 0.15, maxSpacingMm: 12 },
+  { gapTolerance: 0.2, maxSpacingMm: 14 },
+  { gapTolerance: 0.25, maxSpacingMm: 16 },
+  { gapTolerance: 0.3, maxSpacingMm: 18 },
+  { gapTolerance: 0.4, maxSpacingMm: 22 },
+  { gapTolerance: 0.5, maxSpacingMm: 25 },
+];
+
 export interface VolumeGeometry {
   slices: number;
   rows: number;
@@ -23,7 +34,7 @@ export interface VolumeGeometry {
   normal: [number, number, number];
   estimatedBytes: number;
 }
-export type VolumeCheck = { ok: true; geometry: VolumeGeometry } | { ok: false; reason: string };
+export type VolumeCheck = { ok: true; geometry: VolumeGeometry } | { ok: false; reason: string; spacing?: boolean };
 
 const nums = (t: Tag, n: number): number[] | null => {
   const v = t?.Value;
@@ -34,8 +45,19 @@ const cross = (a: number[], b: number[]): [number, number, number] => [a[1]! * b
 const mb = (b: number) => `${Math.round(b / 1024 ** 2)} MB`;
 
 export function validateVolumeSeries(frames: VolumeFrame[], limits: Partial<VolumeLimits> = {}): VolumeCheck {
+  const first = checkVolumeSeries(frames, limits);
+  if (first.ok || !first.spacing || limits.gapTolerance !== undefined || limits.maxSpacingMm !== undefined) return first;
+  for (const step of SPACING_LADDER.slice(1)) {
+    const r = checkVolumeSeries(frames, { ...limits, ...step });
+    if (r.ok) return r;
+    if (!r.spacing) break;
+  }
+  return first; // keep the strict refusal message
+}
+
+function checkVolumeSeries(frames: VolumeFrame[], limits: Partial<VolumeLimits>): VolumeCheck {
   const L = { ...DEFAULT_LIMITS, ...limits };
-  const refuse = (reason: string): VolumeCheck => ({ ok: false, reason });
+  const refuse = (reason: string, spacing = false): VolumeCheck => ({ ok: false, reason, spacing });
   if (frames.length < L.minSlices)
     return refuse(`A série tem ${frames.length} imagem(ns); são necessárias ao menos ${L.minSlices} cortes para reconstruir um volume.`);
 
@@ -72,9 +94,9 @@ export function validateVolumeSeries(frames: VolumeFrame[], limits: Partial<Volu
   const sorted = [...gaps].sort((a, b) => a - b);
   const median = sorted[Math.floor(sorted.length / 2)]!;
   if (gaps.some((g) => Math.abs(g - median) > L.gapTolerance * median))
-    return refuse(`O espaçamento entre cortes não é uniforme (mediana ${median.toFixed(2)} mm, de ${sorted[0]!.toFixed(2)} a ${sorted.at(-1)!.toFixed(2)} mm); há cortes faltando ou a série tem gantry inclinado.`);
+    return refuse(`O espaçamento entre cortes não é uniforme (mediana ${median.toFixed(2)} mm, de ${sorted[0]!.toFixed(2)} a ${sorted.at(-1)!.toFixed(2)} mm); há cortes faltando ou a série tem gantry inclinado.`, true);
   if (median > L.maxSpacingMm)
-    return refuse(`Os cortes estão muito espaçados (${median.toFixed(1)} mm; o limite é ${L.maxSpacingMm} mm); as reformatações coronal e sagital ficariam inutilizáveis.`);
+    return refuse(`Os cortes estão muito espaçados (${median.toFixed(1)} mm; o limite é ${L.maxSpacingMm} mm); as reformatações coronal e sagital ficariam inutilizáveis.`, true);
 
   const ps = nums(frames[0]!.instance["00280030"], 2) ?? [1, 1]; // [row spacing, column spacing]
   const bits = nums(frames[0]!.instance["00280100"], 1)?.[0] ?? 16;

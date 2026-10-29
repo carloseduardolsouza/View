@@ -56,13 +56,12 @@ function fillFree(cells: Cells, n: number, studyUid: string, series: SeriesSumma
 
 interface ViewerProps {
   study: StudySummary;
-  onClose: () => void;
   /** opens the MPR / 3D screen for a series (App swaps the screens) */
   onOpenMpr: (seriesUid: string) => void;
   onOpenFusion: (ctSeriesUid: string, ptSeriesUid: string) => void;
 }
 
-export function Viewer({ study, onClose, onOpenMpr, onOpenFusion }: ViewerProps) {
+export function Viewer({ study, onOpenMpr, onOpenFusion }: ViewerProps) {
   const studyUid = study.studyUid;
   const patient = personName(study.patientName);
 
@@ -532,10 +531,9 @@ export function Viewer({ study, onClose, onOpenMpr, onOpenFusion }: ViewerProps)
       case "app.toggleLeft": return setLeftOpen((o) => !o);
       case "app.toggleRight": return setRightOpen((o) => !o);
       case "app.shortcuts": return setShowKeys(true);
-      case "app.back": return onClose();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active, series, onClose, focus, history, layout]);
+  }, [active, series, focus, history, layout]);
   const runRef = useRef(run);
   runRef.current = run;
   const keymapRef = useRef(keymap);
@@ -613,7 +611,6 @@ export function Viewer({ study, onClose, onOpenMpr, onOpenFusion }: ViewerProps)
           </>
         }
       />
-        <button className="btn" onClick={onClose}><Icon name="prev" />Estudos</button>
         <button className="btn sq" onClick={() => run("app.toggleLeft")} title="Painel esquerdo (estudo e séries)" aria-label="Alternar painel esquerdo" aria-pressed={leftOpen}><Icon name="panelL" /></button>
         <button className="btn sq" onClick={() => run("app.toggleRight")} title="Painel direito (ajustes e medidas)" aria-label="Alternar painel direito" aria-pressed={rightOpen}><Icon name="panelR" /></button>
         <button className="btn pri" onClick={() => run("app.focus")} title="Modo foco: esconde os dois painéis" aria-pressed={focus}><Icon name="full" />Foco</button>

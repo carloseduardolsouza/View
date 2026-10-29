@@ -11,7 +11,7 @@
     "dev:web": "pnpm --filter @view/web dev",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
-    "build": "pnpm -r build",
+    "build": "pnpm -r build && node scripts/collect-dist.mjs",
     "e2e": "playwright test"
   },
   "devDependencies": {

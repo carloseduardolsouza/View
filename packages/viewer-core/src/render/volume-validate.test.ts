@@ -29,7 +29,11 @@ describe("validateVolumeSeries", () => {
     const f = stack(5); f[3] = slice(5);
     expect(reason(f)).toMatch(/não é uniforme/);
   });
-  it("refuses spacing above the limit", () => expect(reason(stack(5, 12))).toMatch(/muito espaçados/));
+  it("refuses spacing above the limit", () => expect(reason(stack(5, 40))).toMatch(/muito espaçados/));
+  it("opens slightly irregular spacing at the first tolerance that fits", () => {
+    const f = stack(5); f[3] = slice(3.2); // gaps 1, 1, 1.2, 0.8 (20% off the median)
+    expect(validateVolumeSeries(f).ok).toBe(true);
+  });
   it("refuses duplicates", () => expect(reason([slice(0), slice(0), slice(1), slice(2)])).toMatch(/duplicados/));
   it("refuses inconsistent in-plane size", () => {
     const f = stack(5); f[1] = slice(1, { "00280011": [256] });

@@ -3,12 +3,7 @@ import { exportMeasurementReport, collectSrAnnotations } from "@view/viewer-core
 import type { StudySummary } from "@view/dicom-client";
 import "../styles/advanced.css";
 
-const stowSr = (bytes: ArrayBuffer) =>
-  fetch("/dicomweb/studies", { method: "POST", headers: { "content-type": "application/dicom" }, body: bytes }).then((r) => {
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  });
-
-/** Modal to export the open study's measurements as a DICOM SR (download or save to the PACS). */
+/** Modal to export the open study's measurements as a DICOM SR (download). */
 export function SrExport({ study, author, onClose }: { study: StudySummary; author?: string; onClose: () => void }) {
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -18,20 +13,15 @@ export function SrExport({ study, author, onClose }: { study: StudySummary; auth
     { studyUid: study.studyUid, patientId: study.patientId, patientName: study.patientName, studyDate: study.date.replace(/\D/g, "").slice(0, 8), accessionNumber: study.accession },
     { author },
   );
-  const run = async (kind: "download" | "pacs") => {
+  const run = async () => {
     setBusy(true); setMsg(null);
     try {
       const bytes = build();
-      if (kind === "download") {
-        const url = URL.createObjectURL(new Blob([bytes], { type: "application/dicom" }));
-        const a = Object.assign(document.createElement("a"), { href: url, download: `relatorio-medidas-${Date.now()}.dcm` });
-        a.click();
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
-        setMsg("Arquivo gerado.");
-      } else {
-        await stowSr(bytes);
-        setMsg("Relatório salvo no PACS.");
-      }
+      const url = URL.createObjectURL(new Blob([bytes], { type: "application/dicom" }));
+      const a = Object.assign(document.createElement("a"), { href: url, download: `relatorio-medidas-${Date.now()}.dcm` });
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setMsg("Arquivo gerado.");
     } catch (e) {
       setMsg(`Falha: ${e instanceof Error ? e.message : "erro desconhecido"}`);
     } finally { setBusy(false); }
@@ -45,8 +35,7 @@ export function SrExport({ study, author, onClose }: { study: StudySummary; auth
         {msg && <p role="status">{msg}</p>}
         <div className="adv-actions">
           <button className="btn" onClick={onClose}>Fechar</button>
-          <button className="btn" disabled={!count || busy} onClick={() => run("download")}>Baixar .dcm</button>
-          <button className="btn" disabled={!count || busy} onClick={() => run("pacs")}>Salvar no PACS</button>
+          <button className="btn" disabled={!count || busy} onClick={() => run()}>Baixar .dcm</button>
         </div>
       </div>
     </div>

@@ -50,7 +50,6 @@ export const COMMANDS: Command[] = [
   { id: "app.toggleLeft", label: "Mostrar/ocultar painel esquerdo", group: "Geral", key: "," },
   { id: "app.toggleRight", label: "Mostrar/ocultar painel direito", group: "Geral", key: "." },
   { id: "app.shortcuts", label: "Mostrar atalhos", group: "Geral", key: "?" },
-  { id: "app.back", label: "Voltar aos estudos", group: "Geral", key: "Escape" },
 ];
 
 export type Keymap = Record<string, string>;
