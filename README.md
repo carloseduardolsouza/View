@@ -1,6 +1,8 @@
 # View
 
-Visualizador DICOM web. Plano: `docs/` e `~/.claude/plans`.
+Visualizador DICOM web: lista estudos de um PACS Orthanc (DICOMweb), exibe séries em 2D, MPR e 3D/fusão, e permite medir e anotar imagens com persistência em Postgres.
+
+**Stack:** monorepo TypeScript (pnpm) · `apps/web` (frontend) · `apps/api` (Node + Postgres + Orthanc) · `packages/` (`viewer-core`, `dicom-client`, `contracts`) · testes com Vitest e Playwright. Plano do projeto em `docs/`.
 
 ## Rodar (dev)
 1. Pré-requisitos: Node 24, pnpm e um Orthanc com DICOMweb + um Postgres.
